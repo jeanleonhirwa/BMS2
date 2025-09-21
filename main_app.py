@@ -53,8 +53,18 @@ class App(ctk.CTk):
         self.setup_budgets_ui()
         self.setup_savings_ui()
 
-        self.status_bar = ctk.CTkLabel(self, text="Welcome!", anchor="w", font=ctk.CTkFont(size=12))
-        self.status_bar.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0,5))
+        # ---- Status and Copyright Bar ---
+        footer_frame = ctk.CTkFrame(self, corner_radius=0, height=25)
+        footer_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=0)
+        footer_frame.grid_columnconfigure(0, weight=1)
+
+        self.status_bar = ctk.CTkLabel(footer_frame, text="Welcome!", anchor="w", font=ctk.CTkFont(size=12))
+        self.status_bar.grid(row=0, column=0, sticky="ew", padx=(10, 5))
+
+        copyright_label = ctk.CTkLabel(footer_frame, text="© 2025, Hirwa Munyaneza Jean Leon", text_color="gray50", anchor="e", font=ctk.CTkFont(size=11))
+        copyright_label.grid(row=0, column=1, sticky="e", padx=(5, 10))
+
+        # ---- Select initial frame ----
         self.select_frame_by_name("dashboard")
 
     def select_frame_by_name(self, name):
