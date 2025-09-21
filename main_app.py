@@ -1,3 +1,4 @@
+
 import customtkinter as ctk
 from db_manager import DBManager
 from matplotlib.figure import Figure
@@ -323,31 +324,116 @@ class App(ctk.CTk):
         self.search_type_combo.set("All Types")
         self.search_transactions_action()
 
-    # --- BUDGETS & SAVINGS (abbreviated for clarity) ---
-    def setup_budgets_ui(self): self.budgets_frame.grid_columnconfigure(0, weight=1); self.budgets_frame.grid_rowconfigure(0, weight=1); self.budgets_scroll_frame = ctk.CTkScrollableFrame(self.budgets_frame, label_text="Monthly Budgets"); self.budgets_scroll_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew"); self.budgets_scroll_frame.grid_columnconfigure(0, weight=1)
+    # --- BUDGETS PAGE ---
+    def setup_budgets_ui(self):
+        self.budgets_frame.grid_columnconfigure(0, weight=1)
+        self.budgets_frame.grid_rowconfigure(0, weight=1)
+        self.budgets_scroll_frame = ctk.CTkScrollableFrame(self.budgets_frame, label_text="Monthly Budgets")
+        self.budgets_scroll_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        self.budgets_scroll_frame.grid_columnconfigure(0, weight=1)
+
     def update_budgets_view(self):
-        for widget in self.budgets_scroll_frame.winfo_children(): widget.destroy()
-        now = datetime.datetime.now(); budget_data = self.db.get_budgets_for_month(now.month, now.year)
-        for item in budget_data: category = item['category']; budget = item['budget_amount']; spent = item['spent_amount']; progress = (spent / budget) if budget > 0 else 0; progress = min(progress, 1.0); item_frame = ctk.CTkFrame(self.budgets_scroll_frame); item_frame.pack(fill="x", expand=True, padx=10, pady=5); item_frame.grid_columnconfigure(1, weight=1); ctk.CTkLabel(item_frame, text=category, font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=10, pady=5, sticky="w"); progress_bar = ctk.CTkProgressBar(item_frame, orientation="horizontal"); progress_bar.set(progress); progress_bar.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="ew"); ctk.CTkLabel(item_frame, text=f"{spent:,.0f} / {budget:,.0f} RWF").grid(row=0, column=1, padx=10, pady=5, sticky="e"); budget_entry = ctk.CTkEntry(item_frame, placeholder_text="Set Budget");
-            if budget > 0: budget_entry.insert(0, f"{budget:.0f}")
-            budget_entry.grid(row=0, column=2, padx=10, pady=5); ctk.CTkButton(item_frame, text="Save", width=60, command=lambda c=category, e=budget_entry: self.save_budget_action(c, e)).grid(row=0, column=3, padx=10, pady=5)
-    def save_budget_action(self, category, entry_widget): 
-        try: new_budget = float(entry_widget.get()); now = datetime.datetime.now(); self.db.set_budget(category, new_budget, now.month, now.year); self.update_budgets_view(); self.show_status_message(f"Budget for {category} saved.")
-        except (ValueError, TypeError): self.show_status_message(f"Error: Invalid budget for {category}.", is_error=True)
-    def setup_savings_ui(self): self.savings_frame.grid_columnconfigure(0, weight=1); self.savings_frame.grid_rowconfigure(1, weight=1); form_frame = ctk.CTkFrame(self.savings_frame); form_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20); form_frame.grid_columnconfigure(0, weight=1); ctk.CTkLabel(form_frame, text="Create New Savings Goal", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=3, padx=10, pady=(10,0), sticky="w"); self.goal_name_entry = ctk.CTkEntry(form_frame, placeholder_text="Goal Name"); self.goal_name_entry.grid(row=1, column=0, padx=10, pady=10, sticky="ew"); self.goal_target_entry = ctk.CTkEntry(form_frame, placeholder_text="Target Amount"); self.goal_target_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew"); ctk.CTkButton(form_frame, text="Create Goal", command=self.create_goal_action).grid(row=1, column=2, padx=10, pady=10); self.savings_scroll_frame = ctk.CTkScrollableFrame(self.savings_frame, label_text="Your Goals"); self.savings_scroll_frame.grid(row=1, column=0, padx=20, pady=(0,20), sticky="nsew")
-    def create_goal_action(self): name = self.goal_name_entry.get(); target_str = self.goal_target_entry.get();
-        if not all([name, target_str]): self.show_status_message("Error: All fields required.", is_error=True); return
-        try: target = float(target_str)
-        except ValueError: self.show_status_message("Error: Target must be a number.", is_error=True); return
-        self.db.add_savings_goal(name, target); self.goal_name_entry.delete(0, "end"); self.goal_target_entry.delete(0, "end"); self.update_savings_view(); self.show_status_message(f"Goal '{name}' created.")
+        for widget in self.budgets_scroll_frame.winfo_children():
+            widget.destroy()
+        now = datetime.datetime.now()
+        budget_data = self.db.get_budgets_for_month(now.month, now.year)
+        for item in budget_data:
+            category = item['category']
+            budget = item['budget_amount']
+            spent = item['spent_amount']
+            progress = (spent / budget) if budget > 0 else 0
+            progress = min(progress, 1.0)
+            item_frame = ctk.CTkFrame(self.budgets_scroll_frame)
+            item_frame.pack(fill="x", expand=True, padx=10, pady=5)
+            item_frame.grid_columnconfigure(1, weight=1)
+            ctk.CTkLabel(item_frame, text=category, font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=10, pady=5, sticky="w")
+            progress_bar = ctk.CTkProgressBar(item_frame, orientation="horizontal")
+            progress_bar.set(progress)
+            progress_bar.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="ew")
+            ctk.CTkLabel(item_frame, text=f"{spent:,.0f} / {budget:,.0f} RWF").grid(row=0, column=1, padx=10, pady=5, sticky="e")
+            budget_entry = ctk.CTkEntry(item_frame, placeholder_text="Set Budget")
+            if budget > 0:
+                budget_entry.insert(0, f"{budget:.0f}")
+            budget_entry.grid(row=0, column=2, padx=10, pady=5)
+            ctk.CTkButton(item_frame, text="Save", width=60, command=lambda c=category, e=budget_entry: self.save_budget_action(c, e)).grid(row=0, column=3, padx=10, pady=5)
+
+    def save_budget_action(self, category, entry_widget):
+        try:
+            new_budget = float(entry_widget.get())
+            now = datetime.datetime.now()
+            self.db.set_budget(category, new_budget, now.month, now.year)
+            self.update_budgets_view()
+            self.show_status_message(f"Budget for {category} saved successfully.")
+        except (ValueError, TypeError):
+            self.show_status_message(f"Error: Invalid budget amount for {category}.", is_error=True)
+
+    # --- SAVINGS PAGE ---
+    def setup_savings_ui(self):
+        self.savings_frame.grid_columnconfigure(0, weight=1)
+        self.savings_frame.grid_rowconfigure(1, weight=1)
+        form_frame = ctk.CTkFrame(self.savings_frame)
+        form_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=20)
+        form_frame.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(form_frame, text="Create New Savings Goal", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=3, padx=10, pady=(10,0), sticky="w")
+        self.goal_name_entry = ctk.CTkEntry(form_frame, placeholder_text="Goal Name")
+        self.goal_name_entry.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        self.goal_target_entry = ctk.CTkEntry(form_frame, placeholder_text="Target Amount")
+        self.goal_target_entry.grid(row=1, column=1, padx=10, pady=10, sticky="ew")
+        ctk.CTkButton(form_frame, text="Create Goal", command=self.create_goal_action).grid(row=1, column=2, padx=10, pady=10)
+        self.savings_scroll_frame = ctk.CTkScrollableFrame(self.savings_frame, label_text="Your Goals")
+        self.savings_scroll_frame.grid(row=1, column=0, padx=20, pady=(0,20), sticky="nsew")
+
+    def create_goal_action(self):
+        name = self.goal_name_entry.get()
+        target_str = self.goal_target_entry.get()
+        if not all([name, target_str]):
+            self.show_status_message("Error: Goal Name and Target Amount are required.", is_error=True)
+            return
+        try:
+            target = float(target_str)
+        except ValueError:
+            self.show_status_message("Error: Target Amount must be a number.", is_error=True)
+            return
+        self.db.add_savings_goal(name, target)
+        self.goal_name_entry.delete(0, "end")
+        self.goal_target_entry.delete(0, "end")
+        self.update_savings_view()
+        self.show_status_message(f"Savings goal '{name}' created successfully!")
+
     def update_savings_view(self):
-        for widget in self.savings_scroll_frame.winfo_children(): widget.destroy()
+        for widget in self.savings_scroll_frame.winfo_children():
+            widget.destroy()
         goals = self.db.get_savings_goals()
-        if not goals: ctk.CTkLabel(self.savings_scroll_frame, text="No savings goals yet.").pack(pady=10)
+        if not goals:
+            ctk.CTkLabel(self.savings_scroll_frame, text="No savings goals yet. Create one above!").pack(pady=10)
         else:
-            for goal in goals: goal_id = goal['id']; name = goal['name']; target = goal['target_amount']; current = goal['current_amount']; progress = (current / target) if target > 0 else 0; progress = min(progress, 1.0); item_frame = ctk.CTkFrame(self.savings_scroll_frame); item_frame.pack(fill="x", expand=True, padx=10, pady=5); item_frame.grid_columnconfigure(1, weight=1); ctk.CTkLabel(item_frame, text=name, font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=10, pady=5, sticky="w"); progress_bar = ctk.CTkProgressBar(item_frame, orientation="horizontal"); progress_bar.set(progress); progress_bar.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="ew"); ctk.CTkLabel(item_frame, text=f"{current:,.0f} / {target:,.0f} RWF").grid(row=0, column=1, padx=10, pady=5, sticky="e"); add_funds_entry = ctk.CTkEntry(item_frame, placeholder_text="Add Funds"); add_funds_entry.grid(row=0, column=2, padx=10, pady=5); ctk.CTkButton(item_frame, text="Add", width=50, command=lambda g_id=goal_id, g_name=name, e=add_funds_entry: self.add_funds_action(g_id, g_name, e)).grid(row=0, column=3, padx=10, pady=5)
+            for goal in goals:
+                goal_id = goal['id']
+                name = goal['name']
+                target = goal['target_amount']
+                current = goal['current_amount']
+                progress = (current / target) if target > 0 else 0
+                progress = min(progress, 1.0)
+                item_frame = ctk.CTkFrame(self.savings_scroll_frame)
+                item_frame.pack(fill="x", expand=True, padx=10, pady=5)
+                item_frame.grid_columnconfigure(1, weight=1)
+                ctk.CTkLabel(item_frame, text=name, font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, padx=10, pady=5, sticky="w")
+                progress_bar = ctk.CTkProgressBar(item_frame, orientation="horizontal")
+                progress_bar.set(progress)
+                progress_bar.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky="ew")
+                ctk.CTkLabel(item_frame, text=f"{current:,.0f} / {target:,.0f} RWF").grid(row=0, column=1, padx=10, pady=5, sticky="e")
+                add_funds_entry = ctk.CTkEntry(item_frame, placeholder_text="Add Funds")
+                add_funds_entry.grid(row=0, column=2, padx=10, pady=5)
+                ctk.CTkButton(item_frame, text="Add", width=50, command=lambda g_id=goal_id, g_name=name, e=add_funds_entry: self.add_funds_action(g_id, g_name, e)).grid(row=0, column=3, padx=10, pady=5)
+
     def add_funds_action(self, goal_id, goal_name, entry_widget):
-        try: amount = float(entry_widget.get());
-            if amount <= 0: self.show_status_message("Error: Amount must be positive.", is_error=True); return
-            self.db.add_to_savings_goal(goal_id, goal_name, amount); self.update_savings_view(); self.show_status_message(f"{amount:,.0f} RWF added to '{goal_name}'.")
-        except (ValueError, TypeError): self.show_status_message(f"Error: Invalid amount for {goal_name}.", is_error=True)
+        try:
+            amount = float(entry_widget.get())
+            if amount <= 0:
+                self.show_status_message("Error: Amount to add must be positive.", is_error=True)
+                return
+            self.db.add_to_savings_goal(goal_id, goal_name, amount)
+            self.update_savings_view()
+            self.show_status_message(f"{amount:,.0f} RWF added to goal '{goal_name}'.")
+        except (ValueError, TypeError):
+            self.show_status_message(f"Error: Invalid amount for {goal_name}.", is_error=True)
