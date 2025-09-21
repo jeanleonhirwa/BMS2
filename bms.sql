@@ -43,10 +43,8 @@ CREATE TABLE `savings_goals` (
 
 -- Insert some default categories to get you started
 INSERT INTO `categories` (`name`) VALUES
-('Parental Allowance'),
+('Parental Money'),
 ('Canteen/Food'),
-('School Supplies'),
-('Transport'),
-('Entertainment'),
+('Internet'),
 ('Savings'),
 ('Other');

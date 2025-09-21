@@ -106,6 +106,60 @@ class DBManager:
         """
         return self.execute_query(query, fetch=True)
 
+    def set_budget(self, category_name, amount, month, year):
+        """Sets or updates the budget for a given category, month, and year."""
+        category_id = self.get_category_id_by_name(category_name)
+        if not category_id:
+            return None
+        
+        query = """
+        INSERT INTO budgets (category_id, amount, month, year)
+        VALUES (%s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE amount = VALUES(amount)
+        """
+        params = (category_id, amount, month, year)
+        return self.execute_query(query, params)
+
+    def get_budgets_for_month(self, month, year):
+        """Retrieves each category's budget and actual spending for a given month."""
+        query = """
+        SELECT 
+            c.name AS category,
+            COALESCE(b.amount, 0) AS budget_amount,
+            COALESCE(spent.total_spent, 0) AS spent_amount
+        FROM categories c
+        LEFT JOIN budgets b ON c.id = b.category_id AND b.month = %s AND b.year = %s
+        LEFT JOIN (
+            SELECT category_id, SUM(amount) AS total_spent
+            FROM transactions
+            WHERE type = 'expense' AND MONTH(transaction_date) = %s AND YEAR(transaction_date) = %s
+            GROUP BY category_id
+        ) AS spent ON c.id = spent.category_id
+        WHERE c.name NOT IN ('Parental Allowance', 'Savings') -- Exclude income categories
+        ORDER BY c.name;
+        """
+        params = (month, year, month, year)
+        return self.execute_query(query, params, fetch=True)
+
+    def add_savings_goal(self, name, target_amount):
+        """Adds a new savings goal."""
+        query = "INSERT INTO savings_goals (name, target_amount) VALUES (%s, %s)"
+        return self.execute_query(query, (name, target_amount))
+
+    def get_savings_goals(self):
+        """Retrieves all savings goals."""
+        query = "SELECT * FROM savings_goals ORDER BY name"
+        return self.execute_query(query, fetch=True)
+
+    def add_to_savings_goal(self, goal_id, goal_name, amount):
+        """Adds funds to a savings goal and creates a corresponding transaction."""
+        # First, create the expense transaction
+        self.add_transaction(amount, 'expense', 'Savings', f"Contribution to {goal_name}")
+        
+        # Second, update the goal's current amount
+        query = "UPDATE savings_goals SET current_amount = current_amount + %s WHERE id = %s"
+        return self.execute_query(query, (amount, goal_id))
+
     def close(self):
         """Close the database connection."""
         if self.conn:
