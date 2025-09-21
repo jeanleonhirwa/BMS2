@@ -61,13 +61,83 @@ class DBManager:
     def get_transactions(self, limit=20):
         """Fetches recent transactions, joining with categories."""
         query = """
-        SELECT t.transaction_date, t.amount, t.type, c.name as category, t.description
+        SELECT t.id, t.transaction_date, t.amount, t.type, c.name as category, t.description
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
         ORDER BY t.transaction_date DESC, t.id DESC
         LIMIT %s
         """
         return self.execute_query(query, (limit,), fetch=True)
+
+    def search_transactions(self, description=None, category=None, trans_type=None, start_date=None, end_date=None):
+        """Searches for transactions based on a set of optional criteria."""
+        query_base = """
+        SELECT t.id, t.transaction_date, t.amount, t.type, c.name as category, t.description
+        FROM transactions t
+        JOIN categories c ON t.category_id = c.id
+        """
+        conditions = []
+        params = []
+
+        if description:
+            conditions.append("t.description LIKE %s")
+            params.append(f"%{description}%")
+        if category:
+            conditions.append("c.name = %s")
+            params.append(category)
+        if trans_type:
+            conditions.append("t.type = %s")
+            params.append(trans_type)
+        if start_date:
+            conditions.append("t.transaction_date >= %s")
+            params.append(start_date)
+        if end_date:
+            conditions.append("t.transaction_date <= %s")
+            params.append(end_date)
+
+        if conditions:
+            query = query_base + " WHERE " + " AND ".join(conditions)
+        else:
+            query = query_base
+        
+        query += " ORDER BY t.transaction_date DESC, t.id DESC"
+
+        return self.execute_query(query, tuple(params), fetch=True)
+
+    def get_transaction_by_id(self, transaction_id):
+        """Fetches a single transaction by its ID."""
+        query = """
+        SELECT t.id, t.transaction_date, t.amount, t.type, c.name as category, t.description
+        FROM transactions t
+        JOIN categories c ON t.category_id = c.id
+        WHERE t.id = %s
+        """
+        result = self.execute_query(query, (transaction_id,), fetch=True)
+        return result[0] if result else None
+
+    def update_transaction(self, transaction_id, date, amount, trans_type, category_name, description):
+        """Updates an existing transaction."""
+        category_id = self.get_category_id_by_name(category_name)
+        if category_id is None: return None
+        query = """
+        UPDATE transactions
+        SET transaction_date = %s, amount = %s, type = %s, category_id = %s, description = %s
+        WHERE id = %s
+        """
+        params = (date, amount, trans_type, category_id, description, transaction_id)
+        return self.execute_query(query, params)
+
+    def delete_transaction(self, transaction_id):
+        """Deletes a transaction by its ID."""
+        # Also need to handle the impact on savings goals if it was a contribution
+        transaction = self.get_transaction_by_id(transaction_id)
+        if transaction and transaction['category'] == 'Savings':
+            # This is a simple approach; a more complex app might link transactions to goals directly
+            # For now, we alert the user that manual adjustment of goals might be needed
+            pass # In a real app, you might reverse the goal contribution here.
+
+        query = "DELETE FROM transactions WHERE id = %s"
+        return self.execute_query(query, (transaction_id,))
 
     def get_categories(self):
         """Fetches all category names."""
