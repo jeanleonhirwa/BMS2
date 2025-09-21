@@ -104,6 +104,21 @@ class DBManager:
 
         return self.execute_query(query, tuple(params), fetch=True)
 
+    def get_monthly_summary(self):
+        """Calculates total income and expense for the last 12 months."""
+        query = """
+        SELECT
+            YEAR(transaction_date) as year,
+            MONTH(transaction_date) as month,
+            SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income,
+            SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expense
+        FROM transactions
+        WHERE transaction_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+        GROUP BY YEAR(transaction_date), MONTH(transaction_date)
+        ORDER BY year, month;
+        """
+        return self.execute_query(query, fetch=True)
+
     def get_transaction_by_id(self, transaction_id):
         """Fetches a single transaction by its ID."""
         query = """
